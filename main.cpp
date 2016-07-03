@@ -3,7 +3,7 @@
 #include <random>
 
 const int sizeX = 40, sizeY = 40;
-const int NINS = 1000000000; // nanosecond in a second
+const int NINS = 1000000000; // nanoseconds in a second
 
 bool map[sizeX][sizeY];
 bool tmp[sizeX][sizeY];
@@ -72,6 +72,7 @@ int main()
 		timespec curr;
 		clock_gettime(CLOCK_MONOTONIC, &curr);
 		long long diff = (curr.tv_sec - lastTime.tv_sec) * NINS + curr.tv_nsec - lastTime.tv_nsec;
+
 		if(diff > NINS / 5)
 		{
 			lastTime = curr;
