@@ -1,12 +1,19 @@
 #include <iostream>
 #include <ctime>
 #include <random>
+#include <SDL2/SDL.h>
 
-const int sizeX = 40, sizeY = 40;
+const int sizeX = 1366, sizeY = 768;
 const int NINS = 1000000000; // nanoseconds in a second
+const bool cli = false;
+
+int drawSize = 1;
 
 bool map[sizeX][sizeY];
 bool tmp[sizeX][sizeY];
+
+SDL_Window* window;
+SDL_Renderer* renderer;
 
 void iterate()
 {
@@ -24,7 +31,6 @@ void iterate()
 			if(y < sizeY-1 and map[x][y+1]) neigbours ++;
 			if(x > 0 and y < sizeY-1 and map[x-1][y+1]) neigbours ++;
 
-			tmp[x][y] = false;
 			if(map[x][y])
 				tmp[x][y] = (neigbours == 2 or neigbours == 3);
 			else
@@ -48,6 +54,24 @@ void print()
 	std::cout << std::flush;
 }
 
+void sdlDraw()
+{
+	SDL_RenderClear(renderer);
+	for(int x = 0;x < sizeX;++ x)
+	{
+		for(int y = 0;y < sizeY;++ y)
+		{
+			if(map[x][y])
+			{
+				for(int dx = 0;dx < drawSize;++ dx)
+					for(int dy = 0;dy < drawSize;++ dy)
+						SDL_RenderDrawPoint(renderer, x*drawSize+dx, y*drawSize+dy);
+			}
+		}
+	}
+	SDL_RenderPresent(renderer);
+}
+
 void init()
 {
 	std::random_device seeder;
@@ -57,6 +81,11 @@ void init()
 	for(int x = 0;x < sizeX;++ x)
 		for(int y = 0;y < sizeY;++ y)
 			map[x][y] = dist(eng);
+
+	if(!cli)
+	{
+		SDL_CreateWindowAndRenderer(sizeX*drawSize, sizeY*drawSize, 0, &window, &renderer);
+	}
 }
 
 int main()
@@ -66,18 +95,43 @@ int main()
 
 	timespec lastTime;
 	clock_gettime(CLOCK_MONOTONIC, &lastTime);
+	timespec fpsCounter;
+	clock_gettime(CLOCK_MONOTONIC, &fpsCounter);
 
+	int count = 0;
 	while(true)
 	{
 		timespec curr;
 		clock_gettime(CLOCK_MONOTONIC, &curr);
 		long long diff = (curr.tv_sec - lastTime.tv_sec) * NINS + curr.tv_nsec - lastTime.tv_nsec;
 
-		if(diff > NINS / 5)
+
+		if(curr.tv_sec > fpsCounter.tv_sec)
+		{
+			std::cout << "FPS: " << count << std::endl;
+			clock_gettime(CLOCK_MONOTONIC, &fpsCounter);
+			count = 0;
+		}
+
+		if(diff > NINS / 60)
 		{
 			lastTime = curr;
-			print();
+
+			if(cli) print();
+			else sdlDraw();
+
 			iterate();
+			count ++;
+		}
+
+		SDL_Event event;
+		while(SDL_PollEvent(&event) != 0)
+		{
+			if(event.type == SDL_QUIT)
+			{
+				SDL_Quit();
+				return 0;
+			}
 		}
 	}
 	return 0;
