@@ -3,14 +3,15 @@
 #include <random>
 #include <SDL2/SDL.h>
 
-const int sizeX = 1366, sizeY = 768;
 const int NINS = 1000000000; // nanoseconds in a second
-const bool cli = false;
 
+int sizeX = 1366, sizeY = 768;
 int drawSize = 1;
+int targetFps = 60;
+bool cli = false;
 
-bool map[sizeX][sizeY];
-bool tmp[sizeX][sizeY];
+bool** map;
+bool** tmp;
 
 SDL_Window* window;
 SDL_Renderer* renderer;
@@ -74,23 +75,46 @@ void sdlDraw()
 
 void init()
 {
+	map = new bool* [sizeX];
+	tmp = new bool* [sizeX];
+
 	std::random_device seeder;
 	std::default_random_engine eng(seeder());
 	std::uniform_int_distribution<int> dist(0, 1);
 
 	for(int x = 0;x < sizeX;++ x)
+	{
+		map[x] = new bool[sizeY];
+		tmp[x] = new bool[sizeY];
 		for(int y = 0;y < sizeY;++ y)
+		{
 			map[x][y] = dist(eng);
+			tmp[x][y] = false;
+		}
+	}
 
 	if(!cli)
-	{
 		SDL_CreateWindowAndRenderer(sizeX*drawSize, sizeY*drawSize, 0, &window, &renderer);
-	}
+	else
+		std::ios_base::sync_with_stdio(false);
 }
 
-int main()
+int main(int argc, char** argv)
 {
-	std::ios_base::sync_with_stdio(false);
+	for(int i = 0;i < argc;++ i)
+	{
+		if(strcmp(argv[i], "--cli") == 0)
+			cli = true;
+		if(strcmp(argv[i], "--scale") == 0)
+			drawSize = atoi(argv[++ i]);
+		if(strcmp(argv[i], "--x") == 0)
+			sizeX = atoi(argv[++ i]);
+		if(strcmp(argv[i], "--y") == 0)
+			sizeY = atoi(argv[++ i]);
+		if(strcmp(argv[i], "--fps") == 0)
+			targetFps = atoi(argv[++ i]);
+	}
+
 	init();
 
 	timespec lastTime;
@@ -113,7 +137,7 @@ int main()
 			count = 0;
 		}
 
-		if(diff > NINS / 60)
+		if(diff > NINS / targetFps)
 		{
 			lastTime = curr;
 
