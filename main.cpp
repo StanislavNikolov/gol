@@ -64,9 +64,15 @@ void sdlDraw()
 		{
 			if(map[x][y])
 			{
-				for(int dx = 0;dx < drawSize;++ dx)
-					for(int dy = 0;dy < drawSize;++ dy)
-						SDL_RenderDrawPoint(renderer, x*drawSize+dx, y*drawSize+dy);
+				if(drawSize == 1)
+				{
+					SDL_RenderDrawPoint(renderer, x, y);
+				}
+				else
+				{
+					SDL_Rect rect = {x*drawSize, y*drawSize, drawSize, drawSize};
+					SDL_RenderFillRect(renderer, &rect);
+				}
 			}
 		}
 	}
