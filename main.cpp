@@ -1,6 +1,7 @@
 #include <iostream>
 #include <ctime>
 #include <random>
+#include <thread>
 #include <SDL2/SDL.h>
 
 const int NINS = 1000000000; // nanoseconds in a second
@@ -8,6 +9,7 @@ const int NINS = 1000000000; // nanoseconds in a second
 int sizeX = 1366, sizeY = 768;
 int drawSize = 1;
 int targetFps = 60;
+int threadCount = 1;
 bool cli = false;
 
 bool** map;
@@ -16,9 +18,9 @@ bool** tmp;
 SDL_Window* window;
 SDL_Renderer* renderer;
 
-void iterate()
+void iterate(int colStart, int colCount)
 {
-	for(int x = 0;x < sizeX;++ x)
+	for(int x = colStart;x < colStart + colCount;++ x)
 	{
 		for(int y = 0;y < sizeY;++ y)
 		{
@@ -39,7 +41,7 @@ void iterate()
 		}
 	}
 
-	for(int x = 0;x < sizeX;++ x)
+	for(int x = colStart;x < colStart + colCount;++ x)
 		for(int y = 0;y < sizeY;++ y)
 			map[x][y] = tmp[x][y];
 }
@@ -57,6 +59,9 @@ void print()
 
 void sdlDraw()
 {
+	if(drawSize == 0)
+		return;
+
 	SDL_RenderClear(renderer);
 	for(int x = 0;x < sizeX;++ x)
 	{
@@ -119,9 +124,14 @@ int main(int argc, char** argv)
 			sizeY = atoi(argv[++ i]);
 		if(strcmp(argv[i], "--fps") == 0)
 			targetFps = atoi(argv[++ i]);
+		if(strcmp(argv[i], "--threads") == 0)
+			threadCount = atoi(argv[++ i]);
 	}
 
 	init();
+
+	std::thread* threads = new std::thread[threadCount];
+
 	if(cli) print();
 	else sdlDraw();
 
@@ -147,7 +157,18 @@ int main(int argc, char** argv)
 
 		if(diff > NINS / targetFps)
 		{
-			iterate();
+			// start all the threads
+			int colsPerThread = sizeX / threadCount;
+			for(int i = 0;i < threadCount-1;++ i)
+				threads[i] = std::thread(iterate, i*colsPerThread, colsPerThread);
+
+			// Make the last thread iterate to the end of the map, fix if sizeX % colsPerThread != 0
+			threads[threadCount-1] = std::thread(iterate, (threadCount-1)*colsPerThread,
+					sizeX - (threadCount-1)*colsPerThread);
+
+			// and now wait for 'em to finish
+			for(int i = 0;i < threadCount;++ i)
+				threads[i].join();
 
 			if(cli) print();
 			else sdlDraw();
