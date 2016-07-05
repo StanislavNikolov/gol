@@ -122,6 +122,8 @@ int main(int argc, char** argv)
 	}
 
 	init();
+	if(cli) print();
+	else sdlDraw();
 
 	timespec lastTime;
 	clock_gettime(CLOCK_MONOTONIC, &lastTime);
@@ -145,12 +147,12 @@ int main(int argc, char** argv)
 
 		if(diff > NINS / targetFps)
 		{
-			lastTime = curr;
+			iterate();
 
 			if(cli) print();
 			else sdlDraw();
 
-			iterate();
+			clock_gettime(CLOCK_MONOTONIC, &lastTime);
 			count ++;
 		}
 
