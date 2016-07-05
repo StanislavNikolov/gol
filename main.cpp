@@ -10,10 +10,12 @@ int sizeX = 1366, sizeY = 768;
 int drawSize = 1;
 int targetFps = 60;
 int threadCount = 1;
+int megacellScale = 1;
 bool cli = false;
 
 bool** map;
 bool** tmp;
+int** renderMap;
 
 SDL_Window* window;
 SDL_Renderer* renderer;
@@ -63,21 +65,29 @@ void sdlDraw()
 		return;
 
 	SDL_RenderClear(renderer);
+	for(int x = 0;x < sizeX / megacellScale;++ x)
+		for(int y = 0;y < sizeY / megacellScale;++ y)
+			renderMap[x][y] = 0;
+
 	for(int x = 0;x < sizeX;++ x)
-	{
 		for(int y = 0;y < sizeY;++ y)
-		{
 			if(map[x][y])
+				renderMap[x / megacellScale][y / megacellScale] ++;
+
+	for(int x = 0;x < sizeX / megacellScale;++ x)
+	{
+		for(int y = 0;y < sizeY / megacellScale;++ y)
+		{
+			int color = ((double)renderMap[x][y] / (double)(megacellScale * megacellScale) * 255.0);
+			SDL_SetRenderDrawColor(renderer, color, color, color, 255);
+			if(drawSize == 1)
 			{
-				if(drawSize == 1)
-				{
-					SDL_RenderDrawPoint(renderer, x, y);
-				}
-				else
-				{
-					SDL_Rect rect = {x*drawSize, y*drawSize, drawSize, drawSize};
-					SDL_RenderFillRect(renderer, &rect);
-				}
+				SDL_RenderDrawPoint(renderer, x, y);
+			}
+			else
+			{
+				SDL_Rect rect = {x * drawSize, y  * drawSize, drawSize, drawSize};
+				SDL_RenderFillRect(renderer, &rect);
 			}
 		}
 	}
@@ -88,6 +98,7 @@ void init()
 {
 	map = new bool* [sizeX];
 	tmp = new bool* [sizeX];
+	renderMap = new int* [sizeX / megacellScale];
 
 	std::random_device seeder;
 	std::default_random_engine eng(seeder());
@@ -103,9 +114,13 @@ void init()
 			tmp[x][y] = false;
 		}
 	}
+	for(int x = 0;x < sizeX / megacellScale;++ x)
+	{
+		renderMap[x] = new int[sizeY / megacellScale];
+	}
 
 	if(!cli)
-		SDL_CreateWindowAndRenderer(sizeX*drawSize, sizeY*drawSize, 0, &window, &renderer);
+		SDL_CreateWindowAndRenderer(sizeX * drawSize / megacellScale, sizeY * drawSize / megacellScale, 0, &window, &renderer);
 	else
 		std::ios_base::sync_with_stdio(false);
 }
@@ -126,7 +141,14 @@ int main(int argc, char** argv)
 			targetFps = atoi(argv[++ i]);
 		if(strcmp(argv[i], "--threads") == 0)
 			threadCount = atoi(argv[++ i]);
+		if(strcmp(argv[i], "--megacell") == 0)
+			megacellScale = atoi(argv[++ i]);
 	}
+
+	std::cout << megacellScale << std::endl;
+
+	sizeX *= megacellScale;
+	sizeY *= megacellScale;
 
 	init();
 
